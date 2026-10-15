@@ -118,6 +118,12 @@ try {
   const hits = await rpc(createClient(url, anonKey, opts), "search_questions", { p_query: `smoke ${run}`, p_category_slug: "tools", p_tag: tag });
   check("ranked search with category + tag filter", hits.length === 1 && hits[0].id === qid);
 
+  // Storage policy: own folder only.
+  const tiny = Buffer.from("R0lGODlhAQABAAAAACw=", "base64"); // 1×1 GIF
+  const own = await helper.client.storage.from("forum-images").upload(`q/${helper.id}/e2e-${run}.gif`, tiny, { contentType: "image/gif" });
+  const other = await helper.client.storage.from("forum-images").upload(`q/${asker.id}/e2e-${run}.gif`, tiny, { contentType: "image/gif" });
+  check("storage: upload to own folder allowed, other's folder refused", !own.error && !!other.error, own.error?.message ?? "");
+
   // Moderation: make the asker a moderator (service role), then act as them.
   let notStaffRefused = false;
   try { await rpc(asker.client, "mod_set_lock", { p_question_id: qid, p_locked: true }); } catch { notStaffRefused = true; }
@@ -159,6 +165,7 @@ try {
     await admin.from("moderation_log").delete().in("moderator_id", users);
   }
   await admin.from("tags").delete().eq("slug", tag);
+  for (const id of users) await admin.storage.from("forum-images").remove([`q/${id}/e2e-${run}.gif`]);
   for (const id of users) {
     const { error } = await admin.auth.admin.deleteUser(id); // cascades profile, reputation, badges
     if (error) check(`delete user`, false, error.message);
