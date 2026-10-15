@@ -28,7 +28,7 @@ export const env = {
     return process.env.RESEND_API_KEY || "";
   },
   get emailFrom() {
-    return process.env.EMAIL_FROM || "UI/UX Forum <notifications@forum.ui-ux.agency>";
+    return process.env.EMAIL_FROM || "UI/UX Forum <no-reply@forum.ui-ux.agency>";
   },
   get siteUrl() {
     return (process.env.SITE_URL || "https://forum.ui-ux.agency").replace(/\/$/, "");
