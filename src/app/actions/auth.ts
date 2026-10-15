@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getOrigin, safeNext } from "@/lib/request";
+import { verifyChallenge } from "@/lib/turnstile";
 import type { ActionResult } from "@/lib/types";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -53,6 +54,8 @@ export async function signUp(_prev: ActionResult, formData: FormData): Promise<A
   const name = String(formData.get("name") ?? "").trim().slice(0, 60);
   if (!EMAIL_RE.test(email)) return { ok: false, error: "Enter a valid email address." };
   if (password.length < 8) return { ok: false, error: "Use at least 8 characters for your password." };
+  const challengeError = await verifyChallenge(formData, null);
+  if (challengeError) return { ok: false, error: challengeError };
 
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signUp({

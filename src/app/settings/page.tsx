@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { AvatarUpload } from "@/components/AvatarUpload";
 import { ProfileForm } from "@/components/ProfileForm";
 import { createClient, getViewer } from "@/lib/supabase/server";
 
@@ -12,7 +13,7 @@ export default async function SettingsPage() {
   const supabase = await createClient();
   const { data: profile } = await supabase
     .from("profiles")
-    .select("username, display_name, bio, website")
+    .select("username, display_name, bio, website, email_notifications, avatar_url")
     .eq("id", viewer.id)
     .single();
   if (!profile) redirect("/");
@@ -23,6 +24,7 @@ export default async function SettingsPage() {
       <p className="hint">
         Signed in as {viewer.email}. <Link href={`/u/${viewer.username}/`}>View profile</Link>
       </p>
+      <AvatarUpload name={profile.display_name} src={profile.avatar_url} />
       <ProfileForm profile={profile} />
     </section>
   );

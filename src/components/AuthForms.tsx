@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 import { sendMagicLink, signInWithPassword, signUp } from "@/app/actions/auth";
 import { FormMessage } from "@/components/FormMessage";
 import { SubmitButton } from "@/components/SubmitButton";
+import { Turnstile } from "@/components/Turnstile";
 
 export function LoginForm({ next }: { next: string }) {
   const [mode, setMode] = useState<"password" | "magic">("password");
@@ -59,7 +60,7 @@ export function LoginForm({ next }: { next: string }) {
   );
 }
 
-export function SignupForm() {
+export function SignupForm({ siteKey = "" }: { siteKey?: string }) {
   const [state, action] = useActionState(signUp, null);
   if (state?.ok) return <FormMessage state={state} />;
   return (
@@ -85,6 +86,7 @@ export function SignupForm() {
         />
         <span className="hint">At least 8 characters.</span>
       </div>
+      <Turnstile siteKey={siteKey} resetKey={state} />
       <FormMessage state={state} />
       <SubmitButton className="btn btn-primary btn-block" pendingLabel="Creating account…">
         Create account

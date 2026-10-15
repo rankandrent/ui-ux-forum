@@ -5,9 +5,10 @@ import { createAnswer, updateAnswer } from "@/app/actions/forum";
 import { FormMessage } from "@/components/FormMessage";
 import { MarkdownEditor } from "@/components/MarkdownEditor";
 import { SubmitButton } from "@/components/SubmitButton";
+import { Turnstile } from "@/components/Turnstile";
 import type { ActionResult } from "@/lib/types";
 
-export function AnswerForm({ questionId }: { questionId: number }) {
+export function AnswerForm({ questionId, siteKey = "" }: { questionId: number; siteKey?: string }) {
   const [posted, setPosted] = useState(0);
   const [state, action] = useActionState(async (prev: ActionResult, formData: FormData) => {
     const result = await createAnswer(prev, formData);
@@ -18,7 +19,8 @@ export function AnswerForm({ questionId }: { questionId: number }) {
   return (
     <form action={action} className="form">
       <input type="hidden" name="question_id" value={questionId} />
-      <MarkdownEditor key={posted} name="body" label="Your answer" required minLength={30} maxLength={20000} />
+      <MarkdownEditor key={posted} name="body" label="Your answer" required minLength={30} maxLength={20000} allowImages />
+      <Turnstile siteKey={siteKey} resetKey={state} />
       <FormMessage state={state} />
       <div>
         <SubmitButton pendingLabel="Posting…">Post your answer</SubmitButton>
@@ -33,7 +35,7 @@ export function EditAnswerForm({ id, body, back }: { id: number; body: string; b
     <form action={action} className="form">
       <input type="hidden" name="id" value={id} />
       <input type="hidden" name="back" value={back} />
-      <MarkdownEditor name="body" label="Answer" defaultValue={body} required minLength={30} maxLength={20000} />
+      <MarkdownEditor name="body" label="Answer" defaultValue={body} required minLength={30} maxLength={20000} allowImages />
       <FormMessage state={state} />
       <div>
         <SubmitButton>Save changes</SubmitButton>

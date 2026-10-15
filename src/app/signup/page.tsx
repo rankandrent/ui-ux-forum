@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { SignupForm } from "@/components/AuthForms";
 import { GoogleButton } from "@/components/GoogleButton";
 import { getViewer } from "@/lib/supabase/server";
+import { challengeSiteKey } from "@/lib/turnstile";
 
 export const metadata: Metadata = { title: "Sign up", robots: { index: false } };
 
@@ -17,8 +18,7 @@ export default async function SignupPage() {
           <p className="hint">Free. Get answers from designers who build AI, SaaS and startup products.</p>
         </div>
         <GoogleButton next="/" label="Sign up with Google" />
-        <div className="divider">or</div>
-        <SignupForm />
+        <SignupForm siteKey={challengeSiteKey(null)} />
         <p className="hint" style={{ margin: 0 }}>
           Already have an account? <Link href="/login/">Log in</Link>
         </p>

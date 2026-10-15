@@ -5,6 +5,7 @@ import { createQuestion, updateQuestion } from "@/app/actions/forum";
 import { FormMessage } from "@/components/FormMessage";
 import { MarkdownEditor } from "@/components/MarkdownEditor";
 import { SubmitButton } from "@/components/SubmitButton";
+import { Turnstile } from "@/components/Turnstile";
 import type { Category } from "@/lib/types";
 
 type Initial = {
@@ -16,7 +17,15 @@ type Initial = {
   image_url: string | null;
 };
 
-export function QuestionForm({ categories, initial }: { categories: Category[]; initial?: Initial }) {
+export function QuestionForm({
+  categories,
+  initial,
+  siteKey = "",
+}: {
+  categories: Category[];
+  initial?: Initial;
+  siteKey?: string;
+}) {
   const [state, action] = useActionState(initial ? updateQuestion : createQuestion, null);
 
   return (
@@ -45,6 +54,7 @@ export function QuestionForm({ categories, initial }: { categories: Category[]; 
         required
         minLength={30}
         maxLength={20000}
+        allowImages
         hint="Markdown supported: **bold**, _italic_, lists, `code`, links and ![images](https://…). HTML is not allowed."
       />
 
@@ -75,6 +85,7 @@ export function QuestionForm({ categories, initial }: { categories: Category[]; 
         <span className="hint">1–5 tags, separated by commas.</span>
       </div>
 
+      <Turnstile siteKey={siteKey} resetKey={state} />
       <FormMessage state={state} />
       <div>
         <SubmitButton pendingLabel={initial ? "Saving…" : "Posting…"}>

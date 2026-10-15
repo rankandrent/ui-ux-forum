@@ -4,9 +4,18 @@ import { useActionState, useState } from "react";
 import { createComment } from "@/app/actions/forum";
 import { FormMessage } from "@/components/FormMessage";
 import { SubmitButton } from "@/components/SubmitButton";
+import { Turnstile } from "@/components/Turnstile";
 import type { ActionResult } from "@/lib/types";
 
-export function CommentForm({ questionId, answerId }: { questionId: number; answerId?: number }) {
+export function CommentForm({
+  questionId,
+  answerId,
+  siteKey = "",
+}: {
+  questionId: number;
+  answerId?: number;
+  siteKey?: string;
+}) {
   const [open, setOpen] = useState(false);
   const [state, action] = useActionState(async (prev: ActionResult, formData: FormData) => {
     const result = await createComment(prev, formData);
@@ -38,6 +47,7 @@ export function CommentForm({ questionId, answerId }: { questionId: number; answ
         placeholder="Ask for clarification or suggest an improvement"
         autoFocus
       />
+      <Turnstile siteKey={siteKey} resetKey={state} />
       <FormMessage state={state && !state.ok ? state : null} />
       <div style={{ display: "flex", gap: 8 }}>
         <SubmitButton className="btn btn-primary" pendingLabel="Posting…">

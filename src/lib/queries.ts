@@ -4,9 +4,11 @@ import { createClient } from "@/lib/supabase/server";
 import { PAGE_SIZE, type SortKey } from "@/lib/site";
 import type { Answer, Category, Comment, Question, QuestionSummary } from "@/lib/types";
 
-const AUTHOR = "author:profiles(username, display_name, avatar_url, reputation)";
+// Explicit FK hints: questions/answers also reach profiles through the vote tables.
+const author = (table: "questions" | "answers" | "comments") =>
+  `author:profiles!${table}_author_id_fkey(username, display_name, avatar_url, reputation)`;
 const SUMMARY_FIELDS = `id, title, slug, score, answer_count, view_count, accepted_answer_id, created_at, last_activity_at,
-  ${AUTHOR}, category:categories(slug, name), question_tags(tags(slug))`;
+  ${author("questions")}, category:categories(slug, name), question_tags(tags(slug))`;
 
 type TagJoin = { question_tags?: { tags: { slug: string } | null }[] };
 
@@ -77,7 +79,7 @@ export async function getThread(questionId: number, viewerId: string | null) {
   const supabase = await createClient();
   const answersRes = await supabase
     .from("answers")
-    .select(`id, question_id, author_id, body, score, is_accepted, is_deleted, created_at, updated_at, ${AUTHOR}`)
+    .select(`id, question_id, author_id, body, score, is_accepted, is_deleted, created_at, updated_at, ${author("answers")}`)
     .eq("question_id", questionId)
     .order("is_accepted", { ascending: false })
     .order("score", { ascending: false })
@@ -88,7 +90,7 @@ export async function getThread(questionId: number, viewerId: string | null) {
 
   const commentQuery = supabase
     .from("comments")
-    .select(`id, question_id, answer_id, author_id, body, is_deleted, created_at, ${AUTHOR}`)
+    .select(`id, question_id, answer_id, author_id, body, is_deleted, created_at, ${author("comments")}`)
     .order("created_at", { ascending: true })
     .limit(500);
   const { data: comments, error: commentsError } = await (answerIds.length
@@ -130,15 +132,67 @@ export async function listTags(limit = 200) {
   return data;
 }
 
-export async function searchQuestions(q: string, limit = 30): Promise<QuestionSummary[]> {
+export async function searchQuestions(
+  q: string,
+  filters: { category?: string; tag?: string } = {},
+  limit = 30,
+): Promise<QuestionSummary[]> {
+  const supabase = await createClient();
+  const { data: hits, error } = await supabase.rpc("search_questions", {
+    p_query: q,
+    p_category_slug: filters.category || null,
+    p_tag: filters.tag || null,
+    p_limit: limit,
+    p_offset: 0,
+  });
+  if (error) throw error;
+  const ids = ((hits ?? []) as { id: number }[]).map((h) => h.id);
+  if (ids.length === 0) return [];
+
+  const { data, error: rowsError } = await supabase.from("questions").select(SUMMARY_FIELDS).in("id", ids);
+  if (rowsError) throw rowsError;
+  const byId = new Map(
+    ((data ?? []) as unknown as (QuestionSummary & TagJoin)[]).map((row) => [row.id, withTags(row) as QuestionSummary]),
+  );
+  // Keep the rank order from search_questions().
+  return ids.map((id) => byId.get(id)).filter((q): q is QuestionSummary => !!q);
+}
+
+export async function getUnreadNotificationCount(userId: string) {
+  const supabase = await createClient();
+  const { count } = await supabase
+    .from("notifications")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .is("read_at", null);
+  return count ?? 0;
+}
+
+export type NotificationRow = {
+  id: number;
+  type: "answer" | "comment" | "accepted" | "badge" | "moderation";
+  question_id: number | null;
+  answer_id: number | null;
+  comment_id: number | null;
+  message: string | null;
+  read_at: string | null;
+  created_at: string;
+  actor: { username: string; display_name: string; avatar_url: string | null } | null;
+  question: { title: string; slug: string } | null;
+};
+
+export async function listNotifications(userId: string, limit = 50): Promise<NotificationRow[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
-    .from("questions")
-    .select(SUMMARY_FIELDS)
-    .eq("is_deleted", false)
-    .textSearch("search_vector", q, { type: "websearch", config: "english" })
-    .order("score", { ascending: false })
+    .from("notifications")
+    .select(
+      `id, type, question_id, answer_id, comment_id, message, read_at, created_at,
+       actor:profiles!notifications_actor_id_fkey(username, display_name, avatar_url),
+       question:questions(title, slug)`,
+    )
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
     .limit(limit);
   if (error) throw error;
-  return ((data ?? []) as unknown as (QuestionSummary & TagJoin)[]).map((row) => withTags(row) as QuestionSummary);
+  return (data ?? []) as unknown as NotificationRow[];
 }

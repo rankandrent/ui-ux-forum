@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Avatar } from "@/components/Avatar";
 import { QuestionList } from "@/components/QuestionList";
+import { ReportButton } from "@/components/ReportButton";
 import { formatDate } from "@/lib/format";
 import { listQuestions } from "@/lib/queries";
 import { questionPath } from "@/lib/site";
@@ -47,7 +48,7 @@ export default async function ProfilePage({ params }: PageProps<"/u/[username]">
     listQuestions({ sort: "latest", page: 1, authorId: profile.id }),
     supabase
       .from("answers")
-      .select("id, score, is_accepted, created_at, question:questions(id, slug, title)", { count: "exact" })
+      .select("id, score, is_accepted, created_at, question:questions!answers_question_id_fkey(id, slug, title)", { count: "exact" })
       .eq("author_id", profile.id)
       .eq("is_deleted", false)
       .order("created_at", { ascending: false })
@@ -90,6 +91,7 @@ export default async function ProfilePage({ params }: PageProps<"/u/[username]">
               Edit profile
             </Link>
           )}
+          {viewer && viewer.id !== profile.id && <ReportButton type="user" id={profile.id} />}
         </div>
         {profile.bio && <p style={{ whiteSpace: "pre-line" }}>{profile.bio}</p>}
         <div className="stat-row">

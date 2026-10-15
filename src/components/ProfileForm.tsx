@@ -5,7 +5,13 @@ import { updateProfile } from "@/app/actions/forum";
 import { FormMessage } from "@/components/FormMessage";
 import { SubmitButton } from "@/components/SubmitButton";
 
-type Props = { username: string; display_name: string; bio: string; website: string | null };
+type Props = {
+  username: string;
+  display_name: string;
+  bio: string;
+  website: string | null;
+  email_notifications: boolean;
+};
 
 export function ProfileForm({ profile }: { profile: Props }) {
   const [state, action] = useActionState(updateProfile, null);
@@ -35,6 +41,10 @@ export function ProfileForm({ profile }: { profile: Props }) {
         <label htmlFor="website">Website</label>
         <input id="website" name="website" type="url" className="input" defaultValue={profile.website ?? ""} placeholder="https://" />
       </div>
+      <label className="checkbox">
+        <input type="checkbox" name="email_notifications" defaultChecked={profile.email_notifications} />
+        Email me when someone answers, comments on or accepts my posts
+      </label>
       <FormMessage state={state} />
       <div>
         <SubmitButton>Save profile</SubmitButton>

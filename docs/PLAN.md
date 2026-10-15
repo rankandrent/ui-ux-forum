@@ -26,17 +26,27 @@ Cloudflare R2 (images) · Cloudflare Turnstile (spam) · Resend (email). Everyth
       `noindex` on unanswered threads, profiles, auth and filtered list pages.
 - [x] Cloudflare Workers config (`wrangler.jsonc`, `open-next.config.ts`).
 
-## Phase 2 — growth & safety
+## Phase 2 — growth & safety ✅
 
-- [ ] Image upload for questions and avatars → R2 (`FORUM_IMAGES` binding), size/type checks.
-- [ ] Turnstile on signup and posting (questions, answers, comments).
-- [ ] Notifications UI (bell + list, mark read); email via Resend when `RESEND_API_KEY` exists.
-- [ ] Report button UI on questions, answers, comments and users.
-- [ ] Moderator/admin panel: reports queue, delete/restore, lock/unlock, ban/unban, edit, moderation log
-      (new migration with `mod_*` functions).
-- [ ] Search improvements: ranking (`ts_rank`), category/tag filters.
-- [ ] SEO: `QAPage` JSON-LD, `sitemap.xml` (only threads with ≥ 1 answer), `robots.txt`,
-      related ui-ux.agency blog/service links per thread (category/tag mapping), Open Graph image.
+- [x] Supabase setup runs from scripts via the Management API: `npm run db:migrate` (idempotent, logged in
+      `forum_meta.migrations`), `npm run db:auth-config`, `npm run db:verify`, `npm run db:e2e`.
+- [x] Image upload for questions/answers ("Add image" in the editor) and avatars (settings) → R2
+      (`FORUM_IMAGES`), served at `/img/…`. Type sniffed from bytes (PNG/JPG/WebP/GIF), 2 MB (avatars 1 MB),
+      daily cap via `record_upload()` (10 new users / 50 others).
+- [x] Turnstile on signup and on questions, answers and comments for users under 50 reputation
+      (skipped until `TURNSTILE_SITE_KEY` + `TURNSTILE_SECRET_KEY` are set).
+- [x] Notifications: header bell with unread count, `/notifications/` list, open = mark read, mark all read.
+      Emails via Resend when `RESEND_API_KEY` exists; users can turn emails off in settings.
+- [x] Report button on questions, answers, comments and user profiles (`create_report` checks the target exists).
+- [x] Moderator/admin panel `/mod/`: reports queue (resolve/dismiss/reopen, delete, lock, manage author),
+      deleted posts with restore, users (ban 1/7/30 days or permanent, unban, roles for admins), moderation log.
+      Lock/unlock and restore also on thread pages. Migration `0005_phase2.sql` (`mod_*` functions).
+- [x] Search: `search_questions()` with `ts_rank_cd` (boosted by score/answers) and category/tag filters.
+- [x] SEO: `QAPage` JSON-LD on threads with answers, `sitemap.xml` (threads with ≥ 1 answer, categories,
+      tags with ≥ 3 questions), `robots.txt`.
+- [ ] Related ui-ux.agency blog/service links per thread — needs the list of agency URLs per category/tag.
+- [ ] Open Graph image — deferred (keeps the Worker bundle small).
+- [ ] Google login — needs a Google Cloud OAuth client; then set `GOOGLE_AUTH_ENABLED=true`.
 
 ## Phase 3 — polish & launch
 

@@ -2,16 +2,21 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { acceptAnswer, deletePost } from "@/app/actions/forum";
+import { modRestore, modSetLock } from "@/app/actions/mod";
 import { AnswerForm } from "@/components/AnswerForm";
 import { Byline } from "@/components/Byline";
 import { CommentForm } from "@/components/CommentForm";
+import { ReportButton } from "@/components/ReportButton";
 import { Sidebar } from "@/components/Sidebar";
 import { VoteButtons } from "@/components/VoteButtons";
 import { compactNumber, plural, timeAgo } from "@/lib/format";
+import { env } from "@/lib/env";
 import { excerpt, renderMarkdown } from "@/lib/markdown";
 import { getQuestion, getThread } from "@/lib/queries";
 import { parseQuestionParam, questionPath } from "@/lib/site";
+import { jsonLdScript, qaPageJsonLd } from "@/lib/schema";
 import { createClient, getViewer, type Viewer } from "@/lib/supabase/server";
+import { challengeSiteKey } from "@/lib/turnstile";
 import type { Comment } from "@/lib/types";
 
 async function loadQuestion(param: string) {
@@ -63,6 +68,17 @@ function CommentList({ comments, viewer, back }: { comments: Comment[]; viewer: 
               </button>
             </form>
           )}
+          {!c.is_deleted && viewer && c.author_id !== viewer.id && <ReportButton type="comment" id={c.id} small />}
+          {c.is_deleted && staff && (
+            <form action={modRestore} style={{ display: "inline" }}>
+              <input type="hidden" name="type" value="comment" />
+              <input type="hidden" name="id" value={c.id} />
+              <input type="hidden" name="back" value={back} />
+              <button className="btn btn-ghost" type="submit">
+                restore
+              </button>
+            </form>
+          )}
         </li>
       ))}
     </ul>
@@ -88,9 +104,15 @@ export default async function QuestionPage({ params, searchParams }: PageProps<"
   const canWrite = !!viewer && !question.is_locked && !question.is_deleted;
   const visibleAnswers = answers.filter((a) => !a.is_deleted || staff || a.author_id === viewer?.id);
   const liveAnswerCount = answers.filter((a) => !a.is_deleted).length;
+  const siteKey = challengeSiteKey(viewer);
+  const jsonLd =
+    liveAnswerCount > 0 && !question.is_deleted
+      ? jsonLdScript(qaPageJsonLd(question, answers, `${env.siteUrl}${path}`, env.siteUrl))
+      : null;
 
   return (
     <div className="layout">
+      {jsonLd && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd }} />}
       <article className="card">
         <header className="thread-head">
           <h1>{question.title}</h1>
@@ -151,11 +173,32 @@ export default async function QuestionPage({ params, searchParams }: PageProps<"
                     </button>
                   </form>
                 )}
+                {staff && !question.is_deleted && (
+                  <form action={modSetLock}>
+                    <input type="hidden" name="id" value={question.id} />
+                    <input type="hidden" name="locked" value={question.is_locked ? "false" : "true"} />
+                    <input type="hidden" name="back" value={path} />
+                    <button className="btn btn-ghost" type="submit">
+                      {question.is_locked ? "Unlock" : "Lock"}
+                    </button>
+                  </form>
+                )}
+                {viewer && !isAsker && !question.is_deleted && <ReportButton type="question" id={question.id} />}
+                {staff && question.is_deleted && (
+                  <form action={modRestore}>
+                    <input type="hidden" name="type" value="question" />
+                    <input type="hidden" name="id" value={question.id} />
+                    <input type="hidden" name="back" value={path} />
+                    <button className="btn btn-ghost" type="submit">
+                      Restore
+                    </button>
+                  </form>
+                )}
               </div>
               <Byline author={question.author} date={question.created_at} verb="asked" />
             </div>
             <CommentList comments={comments.filter((c) => c.question_id === question.id)} viewer={viewer} back={path} />
-            {canWrite && <CommentForm questionId={question.id} />}
+            {canWrite && <CommentForm questionId={question.id} siteKey={siteKey} />}
           </div>
         </div>
 
@@ -210,11 +253,24 @@ export default async function QuestionPage({ params, searchParams }: PageProps<"
                       </form>
                     </>
                   )}
+                  {viewer && answer.author_id !== viewer.id && !answer.is_deleted && (
+                    <ReportButton type="answer" id={answer.id} />
+                  )}
+                  {staff && answer.is_deleted && (
+                    <form action={modRestore}>
+                      <input type="hidden" name="type" value="answer" />
+                      <input type="hidden" name="id" value={answer.id} />
+                      <input type="hidden" name="back" value={path} />
+                      <button className="btn btn-ghost" type="submit">
+                        Restore
+                      </button>
+                    </form>
+                  )}
                 </div>
                 <Byline author={answer.author} date={answer.created_at} verb="answered" />
               </div>
               <CommentList comments={comments.filter((c) => c.answer_id === answer.id)} viewer={viewer} back={path} />
-              {canWrite && !answer.is_deleted && <CommentForm questionId={question.id} answerId={answer.id} />}
+              {canWrite && !answer.is_deleted && <CommentForm questionId={question.id} answerId={answer.id} siteKey={siteKey} />}
             </div>
           </div>
         ))}
@@ -223,7 +279,7 @@ export default async function QuestionPage({ params, searchParams }: PageProps<"
           {question.is_locked ? (
             <p className="hint">This question is locked. New answers and comments are disabled.</p>
           ) : viewer ? (
-            <AnswerForm questionId={question.id} />
+            <AnswerForm questionId={question.id} siteKey={siteKey} />
           ) : (
             <p>
               <Link className="btn btn-primary" href={`/login/?next=${encodeURIComponent(path)}`}>

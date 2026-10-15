@@ -32,7 +32,6 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
           </p>
         )}
         <GoogleButton next={next} />
-        <div className="divider">or</div>
         <LoginForm next={next} />
         <p className="hint" style={{ margin: 0 }}>
           New here? <Link href="/signup/">Create an account</Link>

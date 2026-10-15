@@ -837,3 +837,133 @@ img {
     flex-direction: column;
   }
 }
+
+/* ---- Phase 2: notifications, reports, uploads, moderation ---- */
+.bell {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  padding: 4px;
+}
+.bell-count {
+  position: absolute;
+  top: -4px;
+  right: -6px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--danger);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+}
+.notif-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.notif-list,
+.mod-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--border);
+}
+.notif {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 14px 24px;
+  border-bottom: 1px solid var(--border);
+}
+.notif.unread {
+  background: var(--primary-tint);
+}
+.notif a {
+  color: var(--text);
+}
+.mod-item {
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  padding: 14px 24px;
+  border-bottom: 1px solid var(--border);
+}
+.mod-item-main {
+  flex: 1 1 320px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.mod-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.inline-form {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.inline-form .select,
+.inline-form .input {
+  width: auto;
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+.search-form {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.search-form .input:first-of-type {
+  flex: 1 1 240px;
+}
+.search-form .select,
+.search-form .input + .input {
+  flex: 0 1 180px;
+  width: auto;
+}
+.report-form {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+  max-width: 420px;
+  margin-top: 8px;
+  font-size: 14px;
+}
+.btn-xs {
+  padding: 0 4px;
+  font-size: 12px;
+  min-height: 0;
+}
+.editor-tools {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.avatar-upload {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  margin: 16px 0 8px;
+}
+.checkbox {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 15px;
+}
+.turnstile:empty {
+  display: none;
+}

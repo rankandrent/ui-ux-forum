@@ -82,7 +82,7 @@ try {
 
   check("accept answer", (await rpc(asker.client, "accept_answer", { p_answer_id: aid })) === true);
 
-  await rpc(asker.client, "create_comment", { p_question_id: null, p_answer_id: aid, p_body: "Temporary e2e comment." });
+  const commentId = await rpc(asker.client, "create_comment", { p_question_id: null, p_answer_id: aid, p_body: "Temporary e2e comment." });
   await rpc(helper.client, "create_comment", { p_question_id: qid, p_answer_id: null, p_body: "Temporary e2e comment." });
   check("comment on answer and question", true);
 
@@ -108,15 +108,56 @@ try {
   const { count: unread } = await asker.client.from("notifications").select("id", { count: "exact", head: true }).is("read_at", null);
   check("mark notifications read", unread === 0);
 
-  await rpc(helper.client, "create_report", { p_target_type: "comment", p_target_id: "0", p_reason: "spam", p_details: "e2e" });
+  let badReportRefused = false;
+  try { await rpc(helper.client, "create_report", { p_target_type: "comment", p_target_id: "0", p_reason: "spam", p_details: "" }); }
+  catch { badReportRefused = true; }
+  check("report on a missing target is refused", badReportRefused);
+  await rpc(helper.client, "create_report", { p_target_type: "comment", p_target_id: String(commentId), p_reason: "spam", p_details: "e2e" });
   check("create report", true);
+
+  const hits = await rpc(createClient(url, anonKey, opts), "search_questions", { p_query: `smoke ${run}`, p_category_slug: "tools", p_tag: tag });
+  check("ranked search with category + tag filter", hits.length === 1 && hits[0].id === qid);
+
+  // Moderation: make the asker a moderator (service role), then act as them.
+  let notStaffRefused = false;
+  try { await rpc(asker.client, "mod_set_lock", { p_question_id: qid, p_locked: true }); } catch { notStaffRefused = true; }
+  check("moderation RPCs refuse normal users", notStaffRefused);
+  await admin.from("profiles").update({ role: "moderator" }).eq("id", asker.id);
+
+  const { data: reports } = await asker.client.from("reports").select("id, status").eq("target_id", String(commentId));
+  check("staff can read the reports queue", reports?.length === 1);
+  await rpc(asker.client, "mod_resolve_report", { p_report_id: reports[0].id, p_status: "resolved", p_note: "e2e" });
+
+  await rpc(asker.client, "mod_set_lock", { p_question_id: qid, p_locked: true, p_note: "e2e" });
+  let lockedRefused = false;
+  try { await rpc(helper.client, "create_comment", { p_question_id: qid, p_answer_id: null, p_body: "Should be refused." }); }
+  catch { lockedRefused = true; }
+  check("lock question blocks new comments", lockedRefused);
+  await rpc(asker.client, "mod_set_lock", { p_question_id: qid, p_locked: false });
+
+  await rpc(asker.client, "delete_post", { p_type: "comment", p_id: commentId });
+  await rpc(asker.client, "mod_restore_post", { p_type: "comment", p_id: commentId, p_note: "e2e" });
+  const { data: restored } = await admin.from("comments").select("is_deleted").eq("id", commentId).single();
+  check("delete + restore comment", restored.is_deleted === false);
+
+  await rpc(asker.client, "mod_ban_user", { p_user: helper.id, p_days: 1, p_note: "e2e" });
+  let bannedRefused = false;
+  try { await rpc(helper.client, "cast_vote", { p_type: "question", p_id: qid, p_value: 0 }); } catch { bannedRefused = true; }
+  check("banned user cannot post or vote", bannedRefused);
+  await rpc(asker.client, "mod_unban_user", { p_user: helper.id });
+
+  const { count: logCount } = await admin.from("moderation_log").select("*", { count: "exact", head: true }).eq("moderator_id", asker.id);
+  check("moderation log written", logCount === 6, `${logCount} entries`);
 } catch (err) {
   check("flow", false, err.message);
 } finally {
   // Cleanup: questions cascade to answers, comments, votes, question_tags and notifications.
   if (questionIds.length) await admin.from("questions").delete().in("id", questionIds);
   await admin.from("questions").delete().eq("title", `E2E smoke test question ${run}`);
-  if (users.length) await admin.from("reports").delete().in("reporter_id", users);
+  if (users.length) {
+    await admin.from("reports").delete().in("reporter_id", users);
+    await admin.from("moderation_log").delete().in("moderator_id", users);
+  }
   await admin.from("tags").delete().eq("slug", tag);
   for (const id of users) {
     const { error } = await admin.auth.admin.deleteUser(id); // cascades profile, reputation, badges
@@ -125,7 +166,7 @@ try {
 
   const left = [];
   if (users.length) {
-    for (const [table, col] of [["profiles", "id"], ["reputation_events", "user_id"], ["user_badges", "user_id"], ["reports", "reporter_id"]]) {
+    for (const [table, col] of [["profiles", "id"], ["reputation_events", "user_id"], ["user_badges", "user_id"], ["reports", "reporter_id"], ["moderation_log", "moderator_id"]]) {
       const { count } = await admin.from(table).select("*", { count: "exact", head: true }).in(col, users);
       if (count) left.push(`${table}=${count}`);
     }

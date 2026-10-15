@@ -2,9 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { createClient, getViewer } from "@/lib/supabase/server";
 import { friendlyError } from "@/lib/errors";
+import { sendPendingNotificationEmails } from "@/lib/notify";
 import { questionPath } from "@/lib/site";
+import { verifyChallenge } from "@/lib/turnstile";
 import type { ActionResult } from "@/lib/types";
 
 const SIGN_IN_REQUIRED: ActionResult = { ok: false, error: "Please sign in first." };
@@ -33,9 +36,12 @@ function validateQuestion(formData: FormData) {
 }
 
 export async function createQuestion(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
-  if (!(await getViewer())) return SIGN_IN_REQUIRED;
+  const viewer = await getViewer();
+  if (!viewer) return SIGN_IN_REQUIRED;
   const input = validateQuestion(formData);
   if ("error" in input) return { ok: false, error: input.error! };
+  const challengeError = await verifyChallenge(formData, viewer);
+  if (challengeError) return { ok: false, error: challengeError };
 
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -77,14 +83,18 @@ export async function updateQuestion(_prev: ActionResult, formData: FormData): P
 }
 
 export async function createAnswer(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
-  if (!(await getViewer())) return SIGN_IN_REQUIRED;
+  const viewer = await getViewer();
+  if (!viewer) return SIGN_IN_REQUIRED;
   const questionId = Number(formData.get("question_id"));
   const body = text(formData, "body");
   if (body.length < 30 || body.length > 20000) return { ok: false, error: "Answers need at least 30 characters." };
+  const challengeError = await verifyChallenge(formData, viewer);
+  if (challengeError) return { ok: false, error: challengeError };
 
   const supabase = await createClient();
   const { error } = await supabase.rpc("create_answer", { p_question_id: questionId, p_body: body });
   if (error) return { ok: false, error: friendlyError(error) };
+  after(sendPendingNotificationEmails);
 
   revalidatePath("/", "layout");
   return { ok: true, message: "Your answer was posted." };
@@ -106,11 +116,14 @@ export async function updateAnswer(_prev: ActionResult, formData: FormData): Pro
 }
 
 export async function createComment(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
-  if (!(await getViewer())) return SIGN_IN_REQUIRED;
+  const viewer = await getViewer();
+  if (!viewer) return SIGN_IN_REQUIRED;
   const questionId = Number(formData.get("question_id")) || null;
   const answerId = Number(formData.get("answer_id")) || null;
   const body = text(formData, "body");
   if (body.length < 5 || body.length > 1000) return { ok: false, error: "Comments should be 5–1000 characters." };
+  const challengeError = await verifyChallenge(formData, viewer);
+  if (challengeError) return { ok: false, error: challengeError };
 
   const supabase = await createClient();
   const { error } = await supabase.rpc("create_comment", {
@@ -119,6 +132,7 @@ export async function createComment(_prev: ActionResult, formData: FormData): Pr
     p_body: body,
   });
   if (error) return { ok: false, error: friendlyError(error) };
+  after(sendPendingNotificationEmails);
 
   revalidatePath("/", "layout");
   return { ok: true };
@@ -137,7 +151,8 @@ export async function castVote(type: "question" | "answer", id: number, value: -
 export async function acceptAnswer(formData: FormData) {
   const answerId = Number(formData.get("answer_id"));
   const supabase = await createClient();
-  await supabase.rpc("accept_answer", { p_answer_id: answerId });
+  const { error } = await supabase.rpc("accept_answer", { p_answer_id: answerId });
+  if (!error) after(sendPendingNotificationEmails);
   revalidatePath("/", "layout");
 }
 
@@ -169,7 +184,13 @@ export async function updateProfile(_prev: ActionResult, formData: FormData): Pr
   const supabase = await createClient();
   const { error } = await supabase
     .from("profiles")
-    .update({ username, display_name: displayName, bio, website: website || null })
+    .update({
+      username,
+      display_name: displayName,
+      bio,
+      website: website || null,
+      email_notifications: formData.get("email_notifications") === "on",
+    })
     .eq("id", viewer.id);
   if (error) {
     if (error.code === "23505") return { ok: false, error: "That username is taken." };
@@ -177,4 +198,32 @@ export async function updateProfile(_prev: ActionResult, formData: FormData): Pr
   }
   revalidatePath("/", "layout");
   return { ok: true, message: "Profile saved." };
+}
+
+export async function markAllNotificationsRead() {
+  const supabase = await createClient();
+  await supabase.rpc("mark_notifications_read", { p_ids: null });
+  revalidatePath("/", "layout");
+}
+
+export async function createReport(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
+  if (!(await getViewer())) return SIGN_IN_REQUIRED;
+  const targetType = text(formData, "target_type");
+  const targetId = text(formData, "target_id");
+  const reason = text(formData, "reason");
+  const details = text(formData, "details").slice(0, 500);
+  if (!["question", "answer", "comment", "user"].includes(targetType)) return { ok: false, error: "Invalid report." };
+  if (!["spam", "offensive", "off_topic", "low_quality", "other"].includes(reason)) {
+    return { ok: false, error: "Choose a reason." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("create_report", {
+    p_target_type: targetType,
+    p_target_id: targetId,
+    p_reason: reason,
+    p_details: details,
+  });
+  if (error) return { ok: false, error: friendlyError(error) };
+  return { ok: true, message: "Thanks — a moderator will review this." };
 }

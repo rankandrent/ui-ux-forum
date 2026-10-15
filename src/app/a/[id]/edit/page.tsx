@@ -13,7 +13,7 @@ export default async function EditAnswerPage({ params }: PageProps<"/a/[id]/edit
   const supabase = await createClient();
   const { data: answer } = await supabase
     .from("answers")
-    .select("id, body, author_id, question:questions(id, slug, title)")
+    .select("id, body, author_id, question:questions!answers_question_id_fkey(id, slug, title)")
     .eq("id", id)
     .maybeSingle<{ id: number; body: string; author_id: string | null; question: { id: number; slug: string; title: string } }>();
   if (!answer) notFound();
