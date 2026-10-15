@@ -12,9 +12,8 @@ export async function Header() {
     <header className="site-header">
       <div className="container">
         <Link href="/" className="brand">
-          <span className="brand-mark" aria-hidden="true">
-            UX
-          </span>
+          {/* eslint-disable-next-line @next/next/no-img-element -- tiny static SVG mark */}
+          <img className="brand-mark" src="/icon.svg" alt="" width={32} height={32} />
           UI/UX Forum
         </Link>
         <nav className="main-nav" aria-label="Main">

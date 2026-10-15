@@ -121,14 +121,9 @@ img {
   text-decoration: none;
 }
 .brand-mark {
-  display: inline-grid;
-  place-items: center;
+  display: block;
   width: 32px;
   height: 32px;
-  border-radius: 9px;
-  background: linear-gradient(135deg, var(--primary), var(--primary-soft));
-  color: #fff;
-  font-size: 0.8rem;
 }
 .main-nav {
   display: flex;
