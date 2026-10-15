@@ -55,7 +55,7 @@ export function QuestionForm({
         minLength={30}
         maxLength={20000}
         allowImages
-        hint="Markdown supported: **bold**, _italic_, lists, `code`, links and ![images](https://…). HTML is not allowed."
+        placeholder="Describe the problem, your product and users, and what you have tried."
       />
 
       <div className="field">

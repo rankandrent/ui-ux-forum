@@ -19,7 +19,7 @@ export function AnswerForm({ questionId, siteKey = "" }: { questionId: number; s
   return (
     <form action={action} className="form">
       <input type="hidden" name="question_id" value={questionId} />
-      <MarkdownEditor key={posted} name="body" label="Your answer" required minLength={30} maxLength={20000} allowImages />
+      <MarkdownEditor key={posted} name="body" label="Your answer" placeholder="Share what worked for you — steps, examples, links." required minLength={30} maxLength={20000} allowImages />
       <Turnstile siteKey={siteKey} resetKey={state} />
       <FormMessage state={state} />
       <div>

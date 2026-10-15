@@ -39,6 +39,9 @@ Workers Paid, Supabase Pro) is out of scope. Current stack: Cloudflare Workers F
       WebP/JPEG under 1 MB; server sniffs the type from bytes; storage policy allows uploads only by signed-in,
       non-banned users into their own folder; daily cap via `record_upload()` (10 new users / 50 others).
       Storage code is isolated in `src/lib/images.ts`.
+- [x] Reddit-style rich text editor (Tiptap, loaded on demand) for questions and answers: toolbar (bold,
+      italic, strike, heading, lists, quote, code, code block, link, image, undo/redo), Ctrl/Cmd+B/I/K, paste and
+      drag-drop image upload, character counter, Markdown mode toggle. Still stores markdown.
 - [x] Backups: `npm run db:backup` → private `backups` bucket (gzipped JSON of all tables, newest 14 kept).
 - [x] Turnstile on signup and on questions, answers and comments for users under 50 reputation
       (skipped until `TURNSTILE_SITE_KEY` + `TURNSTILE_SECRET_KEY` are set).
