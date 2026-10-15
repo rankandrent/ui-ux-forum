@@ -94,8 +94,10 @@ img {
 
 /* Header */
 .site-header {
-  background: var(--navy);
-  color: #fff;
+  background: var(--surface);
+  color: var(--text);
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 1px 2px rgba(2, 8, 22, 0.04);
   position: sticky;
   top: 0;
   z-index: 20;
@@ -110,7 +112,7 @@ img {
   display: flex;
   align-items: center;
   gap: 10px;
-  color: #fff;
+  color: var(--navy);
   font-weight: 800;
   font-size: 1.05rem;
   white-space: nowrap;
@@ -125,6 +127,7 @@ img {
   height: 32px;
   border-radius: 9px;
   background: linear-gradient(135deg, var(--primary), var(--primary-soft));
+  color: #fff;
   font-size: 0.8rem;
 }
 .main-nav {
@@ -132,15 +135,15 @@ img {
   gap: 4px;
 }
 .main-nav a {
-  color: #c9d6f2;
+  color: var(--muted);
   padding: 6px 10px;
   border-radius: var(--radius-sm);
   font-weight: 600;
   font-size: 0.95rem;
 }
 .main-nav a:hover {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.08);
+  color: var(--primary);
+  background: var(--primary-tint);
   text-decoration: none;
 }
 .header-search {
@@ -150,16 +153,22 @@ img {
 }
 .header-search input {
   width: 100%;
-  background: var(--navy-2);
-  border: 1px solid #2c3746;
-  color: #fff;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
   border-radius: 999px;
   padding: 8px 16px;
   font: inherit;
   font-size: 0.9rem;
 }
 .header-search input::placeholder {
-  color: #8d9bb3;
+  color: var(--muted);
+}
+.header-search input:focus {
+  outline: none;
+  border-color: var(--primary);
+  background: var(--surface);
+  box-shadow: 0 0 0 3px rgba(7, 85, 233, 0.15);
 }
 .header-actions {
   display: flex;
@@ -167,7 +176,7 @@ img {
   gap: 8px;
 }
 .header-actions .link-light {
-  color: #fff;
+  color: var(--navy-2);
   font-weight: 600;
   padding: 6px 10px;
 }
@@ -232,7 +241,9 @@ img {
 
 /* Layout */
 .page {
-  padding: 28px 0 64px;
+  /* only vertical: .container provides the 16px side gutter */
+  padding-top: 28px;
+  padding-bottom: 64px;
 }
 .layout {
   display: grid;
@@ -294,13 +305,14 @@ img {
   text-decoration: none;
 }
 .cta-card {
-  background: linear-gradient(150deg, var(--navy) 0%, var(--navy-2) 100%);
-  color: #dbe4f7;
+  background: var(--primary-tint);
+  border: 1px solid #cfdcfb;
+  color: var(--text);
   border-radius: var(--radius);
   padding: 20px;
 }
 .cta-card h2 {
-  color: #fff;
+  color: var(--primary);
   text-transform: none;
   letter-spacing: 0;
   font-size: 1.05rem;

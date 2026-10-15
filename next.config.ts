@@ -16,10 +16,6 @@ const nextConfig: NextConfig = {
           { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
         ],
       },
-      {
-        source: "/sitemap.xml",
-        headers: [{ key: "Cache-Control", value: "public, max-age=0, s-maxage=3600" }],
-      },
     ];
   },
 };

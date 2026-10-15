@@ -2,12 +2,17 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Avatar } from "@/components/Avatar";
+import { JsonLd } from "@/components/JsonLd";
 import { QuestionList } from "@/components/QuestionList";
 import { ReportButton } from "@/components/ReportButton";
+import { env } from "@/lib/env";
 import { formatDate } from "@/lib/format";
+import { excerpt } from "@/lib/markdown";
+import { breadcrumbJsonLd, profilePageJsonLd } from "@/lib/schema";
 import { listQuestions } from "@/lib/queries";
 import { questionPath } from "@/lib/site";
 import { createClient, getViewer } from "@/lib/supabase/server";
+import { INDEX_ROBOTS, NOINDEX_ROBOTS, OG_IMAGES } from "@/lib/seo";
 
 type Profile = {
   id: string;
@@ -35,7 +40,21 @@ async function getProfile(username: string) {
 export async function generateMetadata({ params }: PageProps<"/u/[username]">): Promise<Metadata> {
   const profile = await getProfile((await params).username);
   if (!profile) return {};
-  return { title: `${profile.display_name} (@${profile.username})`, robots: { index: false, follow: true } };
+  // Profiles are indexed once the user has helped (3+ upvoted answers or an accepted answer).
+  const supabase = await createClient();
+  const { data: indexable } = await supabase.rpc("profile_is_indexable", { p_user: profile.id });
+  const path = `/u/${profile.username}/`;
+  const title = `${profile.display_name} (@${profile.username})`;
+  const description = profile.bio
+    ? excerpt(profile.bio, 155)
+    : `${profile.display_name} on ${"UI/UX Forum"} — ${profile.reputation} reputation.`;
+  return {
+    title,
+    description,
+    alternates: { canonical: path },
+    robots: indexable ? INDEX_ROBOTS : NOINDEX_ROBOTS,
+    openGraph: { title, description, url: path, type: "profile", images: profile.avatar_url ? [profile.avatar_url] : OG_IMAGES },
+  };
 }
 
 export default async function ProfilePage({ params }: PageProps<"/u/[username]">) {
@@ -71,6 +90,15 @@ export default async function ProfilePage({ params }: PageProps<"/u/[username]">
 
   return (
     <div className="form" style={{ gap: 20 }}>
+      <JsonLd
+        data={profilePageJsonLd({
+          siteUrl: env.siteUrl,
+          profile,
+          questionCount: questionTotal,
+          answerCount: answersRes.count ?? 0,
+        })}
+      />
+      <JsonLd data={breadcrumbJsonLd(env.siteUrl, [{ name: profile.display_name, path: `/u/${profile.username}/` }])} />
       <section className="card card-pad">
         <div className="profile-head">
           <Avatar name={profile.display_name} src={profile.avatar_url} size={88} />

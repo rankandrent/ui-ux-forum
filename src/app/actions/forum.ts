@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { after } from "next/server";
 import { createClient, getViewer } from "@/lib/supabase/server";
 import { friendlyError } from "@/lib/errors";
+import { pingIndexNow } from "@/lib/indexnow";
 import { sendPendingNotificationEmails } from "@/lib/notify";
 import { questionPath } from "@/lib/site";
 import { verifyChallenge } from "@/lib/turnstile";
@@ -95,6 +96,11 @@ export async function createAnswer(_prev: ActionResult, formData: FormData): Pro
   const { error } = await supabase.rpc("create_answer", { p_question_id: questionId, p_body: body });
   if (error) return { ok: false, error: friendlyError(error) };
   after(sendPendingNotificationEmails);
+  // A thread becomes indexable with its first answer — tell IndexNow.
+  after(async () => {
+    const { data: q } = await supabase.from("questions").select("id, slug, answer_count").eq("id", questionId).single();
+    if (q?.answer_count === 1) await pingIndexNow([questionPath(q.id, q.slug)]);
+  });
 
   revalidatePath("/", "layout");
   return { ok: true, message: "Your answer was posted." };

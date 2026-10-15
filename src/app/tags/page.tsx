@@ -2,11 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { plural } from "@/lib/format";
 import { listTags } from "@/lib/queries";
+import { INDEX_ROBOTS, OG_IMAGES } from "@/lib/seo";
 
 export const metadata: Metadata = {
   title: "Tags",
   description: "Browse UI/UX design questions by topic.",
   alternates: { canonical: "/tags/" },
+  robots: INDEX_ROBOTS,
+  openGraph: { title: "Tags", description: "Browse UI/UX design questions by topic.", url: "/tags/", images: OG_IMAGES },
 };
 
 export default async function TagsPage() {

@@ -54,6 +54,13 @@ Workers Paid, Supabase Pro) is out of scope. Current stack: Cloudflare Workers F
 - [x] Search: `search_questions()` with `ts_rank_cd` (boosted by score/answers) and category/tag filters.
 - [x] SEO: `QAPage` JSON-LD on threads with answers, `sitemap.xml` (threads with ≥ 1 answer, categories,
       tags with ≥ 3 questions), `robots.txt`.
+- [x] Forum SEO pass: QAPage (full text, net upvoteCount + Like/Dislike InteractionCounter, comments, dates,
+      author image), ProfilePage on profiles (indexed after 3 upvoted answers or 1 accepted), WebSite +
+      Organization, BreadcrumbList, CollectionPage/ItemList on categories and tags; explicit robots +
+      max-image-preview:large; branded og:image + summary_large_image; self-canonical pagination, noindex sort
+      variants and empty listings, 404 past the last page; sitemap index (threads/categories/tags/users with
+      lastmod); robots.txt without Host and without blocking noindex pages; IndexNow ping on first answer.
+      No Review/AggregateRating markup (self-serving reviews are against Google's guidelines).
 - [ ] Related ui-ux.agency blog/service links per thread — needs the list of agency URLs per category/tag.
 - [ ] Open Graph image — deferred (keeps the Worker bundle small).
 - [ ] Google login — needs a Google Cloud OAuth client; then set `GOOGLE_AUTH_ENABLED=true`.

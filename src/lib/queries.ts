@@ -52,6 +52,8 @@ export async function listQuestions(opts: {
 
   const from = (opts.page - 1) * PAGE_SIZE;
   const { data, error, count } = await query.range(from, from + PAGE_SIZE - 1);
+  // Page past the end: PostgREST answers 416 — treat it as an empty page (callers 404 it).
+  if (error?.code === "PGRST103") return { questions: [], total: count ?? 0 };
   if (error) throw error;
   const rows = (data ?? []) as unknown as (QuestionSummary & TagJoin & { tag_filter?: unknown })[];
   return {
@@ -195,4 +197,15 @@ export async function listNotifications(userId: string, limit = 50): Promise<Not
     .limit(limit);
   if (error) throw error;
   return (data ?? []) as unknown as NotificationRow[];
+}
+
+/** Aggregated up/down votes for a thread (question + answers), keyed "question:<id>" / "answer:<id>". */
+export async function getVoteTallies(questionId: number) {
+  const supabase = await createClient();
+  const { data } = await supabase.rpc("thread_vote_tallies", { p_question_id: questionId });
+  const map = new Map<string, { ups: number; downs: number }>();
+  for (const row of (data ?? []) as { target_type: string; target_id: number; ups: number; downs: number }[]) {
+    map.set(`${row.target_type}:${row.target_id}`, { ups: row.ups, downs: row.downs });
+  }
+  return map;
 }

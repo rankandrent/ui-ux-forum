@@ -47,3 +47,18 @@ export function excerpt(source: string, max = 160): string {
     .trim();
   return text.length > max ? `${text.slice(0, max - 1).trimEnd()}…` : text;
 }
+
+/** Full plain text of a post (rendered, tags stripped) — for structured data. */
+export function plainText(source: string): string {
+  return md
+    .render(source)
+    .replace(/<\/(p|li|h\d|blockquote|pre)>/g, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}

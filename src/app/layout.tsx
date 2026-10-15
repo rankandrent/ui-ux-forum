@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Header } from "@/components/Header";
 import { AGENCY_URL, SITE_NAME, SITE_TAGLINE } from "@/lib/site";
 import "./globals.css";
+import { INDEX_ROBOTS, OG_IMAGES } from "@/lib/seo";
 
 const jakarta = Plus_Jakarta_Sans({
   variable: "--font-jakarta",
@@ -16,13 +17,19 @@ export const metadata: Metadata = {
   title: { default: `${SITE_NAME} — ${SITE_TAGLINE}`, template: `%s — ${SITE_NAME}` },
   description:
     "A Q&A community for UI/UX design questions: UX research, UI design, SaaS and AI products, design costs and hiring designers.",
-  openGraph: { siteName: SITE_NAME, type: "website", locale: "en_US" },
-  twitter: { card: "summary" },
+  openGraph: {
+    siteName: SITE_NAME,
+    type: "website",
+    locale: "en_US",
+    images: OG_IMAGES,
+  },
+  twitter: { card: "summary_large_image", images: ["/og-default.png"] },
+  robots: INDEX_ROBOTS,
   // Google Search Console (same property owner as ui-ux.agency).
   verification: { google: "LCyoJr0FqLu5Kxewm-5p1Y21ThA7E4F6D3KHAPThhqo" },
 };
 
-export const viewport: Viewport = { themeColor: "#020816" };
+export const viewport: Viewport = { themeColor: "#ffffff" };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (

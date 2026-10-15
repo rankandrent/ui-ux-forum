@@ -12,12 +12,14 @@ import { VoteButtons } from "@/components/VoteButtons";
 import { compactNumber, plural, timeAgo } from "@/lib/format";
 import { env } from "@/lib/env";
 import { excerpt, renderMarkdown } from "@/lib/markdown";
-import { getQuestion, getThread } from "@/lib/queries";
+import { getQuestion, getThread, getVoteTallies } from "@/lib/queries";
 import { parseQuestionParam, questionPath } from "@/lib/site";
-import { jsonLdScript, qaPageJsonLd } from "@/lib/schema";
+import { JsonLd } from "@/components/JsonLd";
+import { breadcrumbJsonLd, qaPageJsonLd } from "@/lib/schema";
 import { createClient, getViewer, type Viewer } from "@/lib/supabase/server";
 import { challengeSiteKey } from "@/lib/turnstile";
 import type { Comment } from "@/lib/types";
+import { INDEX_ROBOTS, NOINDEX_ROBOTS, OG_IMAGES } from "@/lib/seo";
 
 async function loadQuestion(param: string) {
   const id = parseQuestionParam(param);
@@ -28,15 +30,25 @@ export async function generateMetadata({ params }: PageProps<"/q/[slug]">): Prom
   const question = await loadQuestion((await params).slug);
   if (!question) return {};
   const path = questionPath(question.id, question.slug);
-  const description = excerpt(question.body);
+  const description = excerpt(question.body, 155);
   // Thin pages (no answers yet) stay out of the index until they get one.
   const indexable = question.answer_count > 0 && !question.is_deleted;
   return {
     title: question.title,
     description,
     alternates: { canonical: path },
-    robots: indexable ? undefined : { index: false, follow: true },
-    openGraph: { title: question.title, description, url: path, type: "article" },
+    robots: indexable ? INDEX_ROBOTS : NOINDEX_ROBOTS,
+    openGraph: {
+      title: question.title,
+      description,
+      url: path,
+      type: "article",
+      publishedTime: question.created_at,
+      modifiedTime: question.updated_at,
+      section: question.category?.name,
+      tags: question.tags,
+      images: OG_IMAGES,
+    },
   };
 }
 
@@ -93,7 +105,10 @@ export default async function QuestionPage({ params, searchParams }: PageProps<"
   if (param !== `${question.id}-${question.slug}`) permanentRedirect(path);
 
   const viewer = await getViewer();
-  const { answers, comments, votes } = await getThread(question.id, viewer?.id ?? null);
+  const [{ answers, comments, votes }, tallies] = await Promise.all([
+    getThread(question.id, viewer?.id ?? null),
+    getVoteTallies(question.id),
+  ]);
   const supabase = await createClient();
   await supabase.rpc("record_question_view", { p_id: question.id });
 
@@ -107,12 +122,17 @@ export default async function QuestionPage({ params, searchParams }: PageProps<"
   const siteKey = challengeSiteKey(viewer);
   const jsonLd =
     liveAnswerCount > 0 && !question.is_deleted
-      ? jsonLdScript(qaPageJsonLd(question, answers, `${env.siteUrl}${path}`, env.siteUrl))
+      ? qaPageJsonLd({ question, answers, comments, tallies, url: `${env.siteUrl}${path}`, siteUrl: env.siteUrl })
       : null;
+  const breadcrumb = breadcrumbJsonLd(env.siteUrl, [
+    ...(question.category ? [{ name: question.category.name, path: `/c/${question.category.slug}/` }] : []),
+    { name: question.title, path },
+  ]);
 
   return (
     <div className="layout">
-      {jsonLd && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd }} />}
+      {jsonLd && <JsonLd data={jsonLd} />}
+      <JsonLd data={breadcrumb} />
       <article className="card">
         <header className="thread-head">
           <h1>{question.title}</h1>

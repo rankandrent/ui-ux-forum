@@ -61,7 +61,7 @@ export async function Header() {
                 <span className="sr-only">Your profile</span>
               </Link>
               <form action={signOut}>
-                <button type="submit" className="btn btn-ghost" style={{ color: "#c9d6f2" }}>
+                <button type="submit" className="btn btn-ghost" style={{ color: "var(--muted)" }}>
                   Log out
                 </button>
               </form>
