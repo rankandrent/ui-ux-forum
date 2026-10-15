@@ -1,0 +1,33 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "ui-ux-forum",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "services": [
+    {
+      "binding": "WORKER_SELF_REFERENCE",
+      "service": "ui-ux-forum"
+    }
+  ],
+  // User-uploaded images (question images, avatars). Create once with:
+  //   npx wrangler r2 bucket create ui-ux-forum-images
+  "r2_buckets": [
+    {
+      "binding": "FORUM_IMAGES",
+      "bucket_name": "ui-ux-forum-images"
+    }
+  ],
+  // Custom domain — the zone ui-ux.agency must be on the same Cloudflare account.
+  "routes": [
+    { "pattern": "forum.ui-ux.agency", "custom_domain": true }
+  ],
+  "vars": {
+    "SITE_URL": "https://forum.ui-ux.agency"
+  },
+  "observability": { "enabled": true }
+}
