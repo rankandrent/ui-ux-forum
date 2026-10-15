@@ -18,6 +18,8 @@ export const metadata: Metadata = {
     "A Q&A community for UI/UX design questions: UX research, UI design, SaaS and AI products, design costs and hiring designers.",
   openGraph: { siteName: SITE_NAME, type: "website", locale: "en_US" },
   twitter: { card: "summary" },
+  // Google Search Console (same property owner as ui-ux.agency).
+  verification: { google: "LCyoJr0FqLu5Kxewm-5p1Y21ThA7E4F6D3KHAPThhqo" },
 };
 
 export const viewport: Viewport = { themeColor: "#020816" };
