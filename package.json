@@ -16,7 +16,8 @@
     "db:verify": "node scripts/verify-db.mjs",
     "db:migrate": "node scripts/db-migrate.mjs",
     "db:e2e": "node scripts/e2e-smoke.mjs",
-    "db:auth-config": "node scripts/db-auth-config.mjs"
+    "db:auth-config": "node scripts/db-auth-config.mjs",
+    "db:backup": "node scripts/db-backup.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

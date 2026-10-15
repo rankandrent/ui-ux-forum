@@ -2,7 +2,11 @@
 
 Q&A forum for UI/UX design questions, owned by [ui-ux.agency](https://ui-ux.agency).
 Stack: Next.js 16 (App Router, TypeScript) on Cloudflare Workers via OpenNext · Supabase (Postgres + Auth) ·
-Cloudflare R2 (images) · Cloudflare Turnstile (spam) · Resend (email). Everything stays on free tiers.
+Supabase Storage (images) · Cloudflare Turnstile (spam) · Resend (email). Everything stays on free tiers.
+
+**Rule: no-card free tiers only.** Any service or add-on that needs a payment method on file (e.g. Cloudflare R2,
+Workers Paid, Supabase Pro) is out of scope. Current stack: Cloudflare Workers Free + Turnstile, Supabase Free
+(DB, Auth, 1 GB Storage), Resend Free.
 
 ## Phase 1 — core forum ✅
 
@@ -30,9 +34,12 @@ Cloudflare R2 (images) · Cloudflare Turnstile (spam) · Resend (email). Everyth
 
 - [x] Supabase setup runs from scripts via the Management API: `npm run db:migrate` (idempotent, logged in
       `forum_meta.migrations`), `npm run db:auth-config`, `npm run db:verify`, `npm run db:e2e`.
-- [x] Image upload for questions/answers ("Add image" in the editor) and avatars (settings) → R2
-      (`FORUM_IMAGES`), served at `/img/…`. Type sniffed from bytes (PNG/JPG/WebP/GIF), 2 MB (avatars 1 MB),
-      daily cap via `record_upload()` (10 new users / 50 others).
+- [x] Image upload for questions/answers ("Add image" in the editor) and avatars (settings) → Supabase Storage
+      public bucket `forum-images` (`0006_storage.sql`). Browser resizes to 1600 px (avatars 512 px) and encodes
+      WebP/JPEG under 1 MB; server sniffs the type from bytes; storage policy allows uploads only by signed-in,
+      non-banned users into their own folder; daily cap via `record_upload()` (10 new users / 50 others).
+      Storage code is isolated in `src/lib/images.ts`.
+- [x] Backups: `npm run db:backup` → private `backups` bucket (gzipped JSON of all tables, newest 14 kept).
 - [x] Turnstile on signup and on questions, answers and comments for users under 50 reputation
       (skipped until `TURNSTILE_SITE_KEY` + `TURNSTILE_SECRET_KEY` are set).
 - [x] Notifications: header bell with unread count, `/notifications/` list, open = mark read, mark all read.

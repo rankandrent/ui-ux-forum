@@ -1,14 +1,15 @@
 # Deploying forum.ui-ux.agency (Cloudflare Workers)
 
-Run from the repo root with `CLOUDFLARE_API_TOKEN` (Workers Scripts edit, Workers R2 edit, Zone → Workers Routes
-edit for ui-ux.agency) and `CLOUDFLARE_ACCOUNT_ID` if the token can see more than one account.
+Everything runs on no-card free tiers (Workers Free, Turnstile, Supabase Free, Resend Free) — no R2.
+
+Run from the repo root with `CLOUDFLARE_API_TOKEN` (Account → Workers Scripts edit; Zone ui-ux.agency → Workers
+Routes edit; Account → Turnstile edit if the widget is created by script) and `CLOUDFLARE_ACCOUNT_ID` if the token can see more than one account.
 Never paste secret values into files — `wrangler secret put` reads them from stdin.
 
 ## 1. One-time setup
 
 ```bash
 npx wrangler whoami                                   # token works, right account
-npx wrangler r2 bucket create ui-ux-forum-images      # bucket bound as FORUM_IMAGES
 
 # Worker secrets (values come from the environment, never echoed)
 for name in SUPABASE_URL SUPABASE_ANON_KEY SUPABASE_SERVICE_ROLE_KEY; do

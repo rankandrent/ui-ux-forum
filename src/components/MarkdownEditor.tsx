@@ -13,7 +13,7 @@ type Props = {
   maxLength?: number;
   small?: boolean;
   required?: boolean;
-  /** Show an "Add image" button that uploads to R2 and inserts the markdown. */
+  /** Show an "Add image" button that uploads the image and inserts the markdown. */
   allowImages?: boolean;
 };
 
@@ -87,7 +87,7 @@ export function MarkdownEditor(props: Props) {
           <button type="button" className="btn btn-ghost" disabled={uploading} onClick={() => fileInput.current?.click()}>
             {uploading ? "Uploading…" : "Add image"}
           </button>
-          <span className="hint">PNG, JPG, WebP or GIF, up to 2 MB.</span>
+          <span className="hint">PNG, JPG, WebP or GIF. Large photos are resized automatically.</span>
         </div>
       )}
       {uploadError && (

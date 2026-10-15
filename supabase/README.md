@@ -29,7 +29,13 @@ Google login stays off until a Google Cloud OAuth client exists (authorized redi
 `https://<project-ref>.supabase.co/auth/v1/callback`); then enable the Google provider with its Client ID
 and Secret.
 
-## 3. Checks
+## 3. Storage & backups
+
+`0006_storage.sql` creates the public `forum-images` bucket (1 MB, images only, own-folder uploads by signed-in,
+non-banned users) and the private `backups` bucket. `npm run db:backup` saves a gzipped JSON dump of all tables
+to `backups/db/` and keeps the newest 14.
+
+## 4. Checks
 
 ```bash
 npm run db:verify   # tables reachable, anon cannot call write RPCs
@@ -37,7 +43,7 @@ npm run db:e2e      # real ask/answer/vote/accept/comment/notification/report fl
                     # users; deletes every row it created and both users, fails if anything is left
 ```
 
-## 4. Make yourself admin (after signing up once)
+## 5. Make yourself admin (after signing up once)
 
 ```sql
 update public.profiles set role = 'admin' where username = '<your-username>';

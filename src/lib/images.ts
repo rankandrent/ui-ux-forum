@@ -1,8 +1,13 @@
 import "server-only";
-import { getCloudflareContext } from "@opennextjs/cloudflare";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { env } from "@/lib/env";
 
-export const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
-export const MAX_AVATAR_BYTES = 1024 * 1024;
+// Image storage. Everything storage-specific lives in this module so the backend can change
+// (Supabase Storage today — free tier, no payment method — Cloudflare R2 possible later).
+
+export const IMAGE_BUCKET = "forum-images";
+/** Same as the bucket's file_size_limit (0006_storage.sql). Browsers resize before uploading. */
+export const MAX_IMAGE_BYTES = 1024 * 1024;
 
 const TYPES = {
   png: "image/png",
@@ -23,14 +28,27 @@ export function sniffImage(bytes: Uint8Array): { ext: ImageExt; contentType: str
   return ext ? { ext, contentType: TYPES[ext] } : null;
 }
 
-export async function getImageBucket() {
-  const { env } = await getCloudflareContext({ async: true });
-  return env.FORUM_IMAGES ?? null;
+/** Object keys: `q/<user-id>/<uuid>.<ext>` or `avatars/<user-id>/<uuid>.<ext>` (storage policy checks the user id). */
+export function imageKey(kind: "question" | "avatar", userId: string, ext: ImageExt) {
+  return `${kind === "avatar" ? "avatars" : "q"}/${userId}/${crypto.randomUUID()}.${ext}`;
 }
 
-/** Object keys look like `q/2026/10/<uuid>.png` or `avatars/<user-id>/<uuid>.webp`. */
-export const IMAGE_KEY_RE = /^(q|avatars)\/[a-z0-9/_-]+\.(png|jpg|webp|gif)$/;
-
-export function imageUrl(siteUrl: string, key: string) {
-  return `${siteUrl}/img/${key}`;
+/**
+ * Stores an image as the signed-in user (storage RLS applies) and returns its public URL.
+ * Throws with a user-facing message on failure.
+ */
+export async function storeImage(
+  supabase: SupabaseClient,
+  key: string,
+  bytes: Uint8Array,
+  contentType: string,
+): Promise<string> {
+  const { error } = await supabase.storage
+    .from(IMAGE_BUCKET)
+    .upload(key, bytes, { contentType, cacheControl: "31536000", upsert: false });
+  if (error) {
+    console.error("storage upload failed", error.message);
+    throw new Error("Could not save the image. Please try again.");
+  }
+  return `${env.supabaseUrl}/storage/v1/object/public/${IMAGE_BUCKET}/${key}`;
 }

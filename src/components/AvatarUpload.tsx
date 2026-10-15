@@ -42,7 +42,7 @@ export function AvatarUpload({ name, src }: { name: string; src: string | null }
           {busy ? "Uploading…" : "Change photo"}
         </button>
         <p className="hint" style={{ margin: "4px 0 0" }}>
-          Square PNG, JPG or WebP, up to 1 MB.
+          Square PNG, JPG or WebP works best.
         </p>
         {error && (
           <p className="alert alert-error" role="alert">
