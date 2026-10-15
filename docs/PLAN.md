@@ -60,7 +60,7 @@ Workers Paid, Supabase Pro) is out of scope. Current stack: Cloudflare Workers F
 
 **Status (2026-10-15):** live at https://forum.ui-ux.agency (Worker `ui-ux-forum`, Workers Free). Supabase migrations
 0001–0006 applied, Auth URLs set, end-to-end browser test passed on production and cleaned up.
-Pending: Turnstile widget + keys, Resend key, Google OAuth client.
+Notification emails on (Resend, no-reply@forum.ui-ux.agency). Pending: Turnstile widget + keys, Google OAuth client.
 
 ## Phase 3 — polish & launch
 
