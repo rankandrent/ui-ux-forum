@@ -55,6 +55,10 @@ Workers Paid, Supabase Pro) is out of scope. Current stack: Cloudflare Workers F
 - [ ] Open Graph image — deferred (keeps the Worker bundle small).
 - [ ] Google login — needs a Google Cloud OAuth client; then set `GOOGLE_AUTH_ENABLED=true`.
 
+**Status (2026-10-15):** live at https://forum.ui-ux.agency (Worker `ui-ux-forum`, Workers Free). Supabase migrations
+0001–0006 applied, Auth URLs set, end-to-end browser test passed on production and cleaned up.
+Pending: Turnstile widget + keys, Resend key, Google OAuth client.
+
 ## Phase 3 — polish & launch
 
 - [ ] Unit tests (markdown sanitizing, slug/URL helpers) and SQL tests for RLS/RPCs.
