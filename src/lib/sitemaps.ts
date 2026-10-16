@@ -3,8 +3,9 @@ import { env } from "@/lib/env";
 import { questionPath } from "@/lib/site";
 import { createPublicClient } from "@/lib/supabase/public";
 
-// Sitemap index + per-type sitemaps. Only indexable URLs: answered, non-deleted threads; non-empty
-// categories; tags with 3+ questions (same rule as the tag page's robots tag); indexable profiles.
+// Sitemap index + per-type sitemaps. Only indexable URLs: visible threads (answered or not) whose
+// author isn't banned; non-empty categories; tags with 3+ questions (same rule as the tag page's
+// robots tag); profiles of members with at least one post who aren't banned.
 
 const MAX_URLS = 50000;
 type Entry = { loc: string; lastmod: string };
@@ -40,22 +41,26 @@ type ThreadRow = {
   last_activity_at: string;
   category: { slug: string } | null;
   question_tags: { tags: { slug: string; question_count: number } | null }[];
+  author: { is_banned: boolean; banned_until: string | null } | null;
 };
 
-/** Answered, visible threads with their category and tags (newest activity first). */
+const isBanned = (a: ThreadRow["author"]) => !!a?.is_banned && (!a.banned_until || new Date(a.banned_until) > new Date());
+
+/** Indexable threads with their category and tags (newest activity first). */
 export async function loadThreads(): Promise<ThreadRow[]> {
   const supabase = createPublicClient();
   const rows: ThreadRow[] = [];
   for (let from = 0; from < MAX_URLS; from += 1000) {
     const { data, error } = await supabase
       .from("questions")
-      .select("id, slug, last_activity_at, category:categories(slug), question_tags(tags(slug, question_count))")
+      .select(
+        "id, slug, last_activity_at, category:categories(slug), question_tags(tags(slug, question_count)), author:profiles!questions_author_id_fkey(is_banned, banned_until)",
+      )
       .eq("is_deleted", false)
-      .gt("answer_count", 0)
       .order("last_activity_at", { ascending: false })
       .range(from, from + 999);
     if (error) throw error;
-    rows.push(...(data as unknown as ThreadRow[]));
+    rows.push(...(data as unknown as ThreadRow[]).filter((t) => !isBanned(t.author)));
     if (data.length < 1000) break;
   }
   return rows;
@@ -65,7 +70,7 @@ export function threadEntries(threads: ThreadRow[]): Entry[] {
   return threads.map((t) => ({ loc: `${env.siteUrl}${questionPath(t.id, t.slug)}`, lastmod: iso(t.last_activity_at) }));
 }
 
-/** Latest activity per category / tag, taken from answered threads. */
+/** Latest activity per category / tag, taken from indexable threads. */
 function latestBy(threads: ThreadRow[], keys: (t: ThreadRow) => string[]) {
   const map = new Map<string, string>();
   for (const t of threads) for (const k of keys(t)) if (!map.has(k) || map.get(k)! < t.last_activity_at) map.set(k, t.last_activity_at);

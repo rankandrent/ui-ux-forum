@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Avatar } from "@/components/Avatar";
 import { JsonLd } from "@/components/JsonLd";
+import { Pagination, pageHref } from "@/components/Pagination";
 import { QuestionList } from "@/components/QuestionList";
 import { ReportButton } from "@/components/ReportButton";
 import { env } from "@/lib/env";
@@ -10,7 +11,7 @@ import { formatDate } from "@/lib/format";
 import { excerpt } from "@/lib/markdown";
 import { breadcrumbJsonLd, profilePageJsonLd } from "@/lib/schema";
 import { listQuestions } from "@/lib/queries";
-import { questionPath } from "@/lib/site";
+import { PAGE_SIZE, parsePage, questionPath } from "@/lib/site";
 import { createClient, getViewer } from "@/lib/supabase/server";
 import { INDEX_ROBOTS, NOINDEX_ROBOTS, OG_IMAGES } from "@/lib/seo";
 
@@ -37,41 +38,45 @@ async function getProfile(username: string) {
   return data;
 }
 
-export async function generateMetadata({ params }: PageProps<"/u/[username]">): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: PageProps<"/u/[username]">): Promise<Metadata> {
   const profile = await getProfile((await params).username);
   if (!profile) return {};
-  // Profiles are indexed once the user has helped (3+ upvoted answers or an accepted answer).
+  const page = parsePage((await searchParams).page);
+  // Indexed when the member has at least one post and is not banned (profile_is_indexable).
   const supabase = await createClient();
   const { data: indexable } = await supabase.rpc("profile_is_indexable", { p_user: profile.id });
   const path = `/u/${profile.username}/`;
-  const title = `${profile.display_name} (@${profile.username})`;
+  const title = `${profile.display_name} (@${profile.username})${page > 1 ? ` — page ${page}` : ""}`;
   const description = profile.bio
     ? excerpt(profile.bio, 155)
     : `${profile.display_name} on ${"UI/UX Forum"} — ${profile.reputation} reputation.`;
   return {
     title,
     description,
-    alternates: { canonical: path },
+    alternates: { canonical: page > 1 ? `${path}?page=${page}` : path },
     robots: indexable ? INDEX_ROBOTS : NOINDEX_ROBOTS,
     openGraph: { title, description, url: path, type: "profile", images: profile.avatar_url ? [profile.avatar_url] : OG_IMAGES },
   };
 }
 
-export default async function ProfilePage({ params }: PageProps<"/u/[username]">) {
+export default async function ProfilePage({ params, searchParams }: PageProps<"/u/[username]">) {
   const profile = await getProfile((await params).username);
   if (!profile) notFound();
+  const page = parsePage((await searchParams).page);
+  const from = (page - 1) * PAGE_SIZE;
+  const base = `/u/${profile.username}/`;
 
   const supabase = await createClient();
   const [viewer, { questions, total: questionTotal }, answersRes, badgesRes] = await Promise.all([
     getViewer(),
-    listQuestions({ sort: "latest", page: 1, authorId: profile.id }),
+    listQuestions({ sort: "latest", page, authorId: profile.id }),
     supabase
       .from("answers")
       .select("id, score, is_accepted, created_at, question:questions!answers_question_id_fkey(id, slug, title)", { count: "exact" })
       .eq("author_id", profile.id)
       .eq("is_deleted", false)
       .order("created_at", { ascending: false })
-      .limit(10),
+      .range(from, from + PAGE_SIZE - 1),
     supabase
       .from("user_badges")
       .select("awarded_at, badge:badges(slug, name, description, tier)")
@@ -84,6 +89,8 @@ export default async function ProfilePage({ params }: PageProps<"/u/[username]">
     is_accepted: boolean;
     question: { id: number; slug: string; title: string } | null;
   }[];
+  const answerTotal = answersRes.count ?? 0;
+  if (page > 1 && questions.length === 0 && answers.length === 0) notFound();
   const badges = (badgesRes.data ?? []) as unknown as {
     badge: { slug: string; name: string; description: string; tier: string };
   }[];
@@ -95,7 +102,7 @@ export default async function ProfilePage({ params }: PageProps<"/u/[username]">
           siteUrl: env.siteUrl,
           profile,
           questionCount: questionTotal,
-          answerCount: answersRes.count ?? 0,
+          answerCount: answerTotal,
         })}
       />
       <JsonLd data={breadcrumbJsonLd(env.siteUrl, [{ name: profile.display_name, path: `/u/${profile.username}/` }])} />
@@ -130,7 +137,7 @@ export default async function ProfilePage({ params }: PageProps<"/u/[username]">
             <strong>{questionTotal}</strong> questions
           </span>
           <span>
-            <strong>{answersRes.count ?? 0}</strong> answers
+            <strong>{answerTotal}</strong> answers
           </span>
         </div>
       </section>
@@ -152,13 +159,13 @@ export default async function ProfilePage({ params }: PageProps<"/u/[username]">
         <h2 className="card-pad" style={{ margin: 0, paddingBottom: 0 }}>
           Questions
         </h2>
-        <QuestionList questions={questions} empty={<p>No questions yet.</p>} />
+        <QuestionList questions={questions} empty={<p>{page > 1 ? "No more questions." : "No questions yet."}</p>} />
       </section>
 
       <section className="card card-pad">
-        <h2 style={{ marginTop: 0 }}>Recent answers</h2>
+        <h2 style={{ marginTop: 0 }}>Answers</h2>
         {answers.length === 0 ? (
-          <p className="hint">No answers yet.</p>
+          <p className="hint">{page > 1 ? "No more answers." : "No answers yet."}</p>
         ) : (
           <ul className="cat-list">
             {answers
@@ -174,6 +181,13 @@ export default async function ProfilePage({ params }: PageProps<"/u/[username]">
           </ul>
         )}
       </section>
+
+      {/* One page parameter walks both lists, newest first, so every post is linked from the profile. */}
+      <Pagination
+        page={page}
+        total={Math.max(questionTotal, answerTotal)}
+        makeHref={(p) => pageHref(base, { page: p > 1 ? String(p) : undefined })}
+      />
     </div>
   );
 }

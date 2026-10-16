@@ -31,8 +31,9 @@ export async function generateMetadata({ params }: PageProps<"/q/[slug]">): Prom
   if (!question) return {};
   const path = questionPath(question.id, question.slug);
   const description = excerpt(question.body, 155);
-  // Thin pages (no answers yet) stay out of the index until they get one.
-  const indexable = question.answer_count > 0 && !question.is_deleted;
+  // Every visible thread is indexable (answered or not), except deleted ones and banned authors'.
+  const supabase = await createClient();
+  const { data: indexable } = await supabase.rpc("thread_is_indexable", { p_question_id: question.id });
   return {
     title: question.title,
     description,
@@ -121,7 +122,7 @@ export default async function QuestionPage({ params, searchParams }: PageProps<"
   const liveAnswerCount = answers.filter((a) => !a.is_deleted).length;
   const siteKey = challengeSiteKey(viewer);
   const jsonLd =
-    liveAnswerCount > 0 && !question.is_deleted
+    !question.is_deleted
       ? qaPageJsonLd({ question, answers, comments, tallies, url: `${env.siteUrl}${path}`, siteUrl: env.siteUrl })
       : null;
   const breadcrumb = breadcrumbJsonLd(env.siteUrl, [

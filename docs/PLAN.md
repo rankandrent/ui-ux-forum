@@ -55,7 +55,8 @@ Workers Paid, Supabase Pro) is out of scope. Current stack: Cloudflare Workers F
 - [x] SEO: `QAPage` JSON-LD on threads with answers, `sitemap.xml` (threads with ≥ 1 answer, categories,
       tags with ≥ 3 questions), `robots.txt`.
 - [x] Forum SEO pass: QAPage (full text, net upvoteCount + Like/Dislike InteractionCounter, comments, dates,
-      author image), ProfilePage on profiles (indexed after 3 upvoted answers or 1 accepted), WebSite +
+      author image), ProfilePage on profiles (indexed once the member has 1+ post and is not banned; posts
+      linked from the paginated profile), every visible thread indexable (answered or not), WebSite +
       Organization, BreadcrumbList, CollectionPage/ItemList on categories and tags; explicit robots +
       max-image-preview:large; branded og:image + summary_large_image; self-canonical pagination, noindex sort
       variants and empty listings, 404 past the last page; sitemap index (threads/categories/tags/users with
